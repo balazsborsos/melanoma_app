@@ -29,7 +29,7 @@ class MelanomaModel(pl.LightningModule): # TODO: add model
         x, labels = batch
         labels_out = self.forward(x)
 
-        loss = self.loss_func(mask_out, mask).mean()
+        loss = self.loss_func(labels_out, labels).mean()
         # TODO: add logging
 
         if self.current_epoch % 3 == 0:
@@ -44,14 +44,14 @@ class MelanomaModel(pl.LightningModule): # TODO: add model
         x, labels = batch
         labels_out = self.forward(x)
 
-        loss = self.loss_func(mask_out, mask).mean()
+        loss = self.loss_func(labels_out, labels).mean()
         # TODO: add logging
 
         if self.current_epoch % 3 == 0:
             if batch_idx <= 20 and batch_idx % 2 == 0:
                 pass
                 # TODO: add logging
-        del x, mask_out
+        del x, labels_out
         del loss
 
 
