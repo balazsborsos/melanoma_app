@@ -1,10 +1,10 @@
 import pandas as pd
 from sklearn.model_selection import train_test_split
 import os
-import shutil # Added for file operations
+import shutil
 
 def split_data(csv_path, img_src_dir, target_dir, 
-               diagnostic_col='diagnostic', image_id_col='image_id', file_ext='.jpg',
+               diagnostic_col='diagnostic', image_id_col='image_id',
                val_size=0.1, test_size=0.1, random_state=42):
     """
     Reads a metadata CSV, performs a stratified split, adds an 'ml_set' column 
@@ -18,7 +18,6 @@ def split_data(csv_path, img_src_dir, target_dir,
                           reference images in these new locations.
         diagnostic_col (str): Name of the column containing the class labels for stratification.
         image_id_col (str): Name of the column containing the unique image identifiers (without extension).
-        file_ext (str): File extension of the images (e.g., '.jpg', '.png').
         val_size (float): Proportion of the dataset to include in the validation split (0.0 to 1.0).
         test_size (float): Proportion of the dataset to include in the test split (0.0 to 1.0).
         random_state (int, optional): Controls the shuffling applied to the data before splitting. 
@@ -167,7 +166,7 @@ def split_data(csv_path, img_src_dir, target_dir,
             skipped_count += 1
             continue
             
-        src_img_filename = f"{str(image_id)}{file_ext}"
+        src_img_filename = f"{str(image_id)}"
         src_img_path = os.path.join(img_src_dir, src_img_filename)
 
         target_subdir = os.path.join(target_dir, ml_set)
@@ -191,70 +190,23 @@ def split_data(csv_path, img_src_dir, target_dir,
 
     return metadata_df
 
-# Example usage:
 if __name__ == '__main__':
-    # --- Create dummy data for demonstration --- 
-    print("Creating dummy data for demonstration...")
-    base_dummy_dir = 'dummy_data_preprocess_move'
-    dummy_csv_path = os.path.join(base_dummy_dir, 'dummy_metadata.csv')
-    dummy_img_src_dir = os.path.join(base_dummy_dir, 'images_source')
-    dummy_target_dir = os.path.join(base_dummy_dir, 'images_split')
-    
-    # Clean up previous run if necessary
-    if os.path.exists(base_dummy_dir):
-        print(f"Cleaning up previous dummy data in '{base_dummy_dir}'...")
-        shutil.rmtree(base_dummy_dir)
-        
-    os.makedirs(dummy_img_src_dir, exist_ok=True)
-    os.makedirs(dummy_target_dir, exist_ok=True)
 
-    num_samples = 200
-    data = {
-        'image_id': [f'img_{i:03d}' for i in range(num_samples)],
-        'patient_id': [f'patient_{i % 50:03d}' for i in range(num_samples)], 
-        'lesion_id': [f'lesion_{i:03d}' for i in range(num_samples)],
-        'diagnostic': [
-            'ClassA' if i < num_samples * 0.6 else 
-            'ClassB' if i < num_samples * 0.9 else 
-            'ClassC' for i in range(num_samples)
-            ],
-        'feature1': [i * 0.1 for i in range(num_samples)]
-    }
-    dummy_df = pd.DataFrame(data)
-    # Add a row with NaN diagnostic to test dropping
-    # dummy_df.loc[num_samples] = {'image_id': f'img_{num_samples:03d}', 'diagnostic': None, 'patient_id': 'patient_999', 'lesion_id': 'lesion_999', 'feature1': 0.0 }
-    # Add a row with missing image_id to test skipping
-    # dummy_df.loc[num_samples+1] = {'image_id': None, 'diagnostic': 'ClassA', 'patient_id': 'patient_998', 'lesion_id': 'lesion_998', 'feature1': 0.1 }
-    
-    dummy_df.to_csv(dummy_csv_path, index=False)
-    print(f"Dummy metadata saved to '{dummy_csv_path}'")
-    
-    # Create dummy image files
-    print(f"Creating {num_samples} dummy image files in '{dummy_img_src_dir}'...")
-    for img_id in dummy_df[dummy_df['image_id'].notna()]['image_id']:
-        img_filename = f"{img_id}.jpg"
-        img_path = os.path.join(dummy_img_src_dir, img_filename)
-        with open(img_path, 'w') as f:
-            f.write(f"content_of_{img_id}") # Create empty/dummy file
-    print("Dummy image files created.")
-    
-    print("Original class distribution:")
-    print(dummy_df['diagnostic'].value_counts(normalize=True))
-    print("-"*30)
-    # --- End of dummy data creation ---
+    csv_path = r"PATH_TO_METADATA_CSV"
+    img_src_dir = r"PATH_TO_IMAGE_DIR"
+    target_dir = r"PATH_TO_TARGET_DIR"
 
     try:
-        print(f"Attempting to split data from '{dummy_csv_path}' and move images...")
+        print(f"Attempting to split data from '{csv_path}' and move images...")
         modified_metadata = split_data(
-            csv_path=dummy_csv_path, 
-            img_src_dir=dummy_img_src_dir,
-            target_dir=dummy_target_dir,
+            csv_path=csv_path, 
+            img_src_dir=img_src_dir,
+            target_dir=target_dir,
             diagnostic_col='diagnostic',
-            image_id_col='image_id', 
-            file_ext='.jpg',
-            val_size=0.15, 
-            test_size=0.15, 
-            random_state=123
+            image_id_col='img_id', 
+            val_size=0.10, 
+            test_size=0.10, 
+            random_state=42
         )
 
         if modified_metadata is not None:
@@ -264,19 +216,12 @@ if __name__ == '__main__':
             print("\nClass distribution within each set:")
             print(modified_metadata.groupby('ml_set')['diagnostic'].value_counts(normalize=True))
             print(f"\nModified metadata head:\n{modified_metadata.head()}")
-            print(f"\nImages have been moved into subfolders within: '{dummy_target_dir}'")
+            print(f"\nImages have been moved into subfolders within: '{target_dir}'")
             
             # --- Optional: Save the modified DataFrame --- 
-            modified_csv_path = os.path.join(dummy_target_dir, 'metadata_split.csv')
+            modified_csv_path = os.path.join(target_dir, 'metadata_split.csv')
             modified_metadata.to_csv(modified_csv_path, index=False)
             print(f"\nModified metadata saved to '{modified_csv_path}'")
 
     except (FileNotFoundError, KeyError, ValueError) as e:
         print(f"\nError during data splitting/moving: {e}")
-    finally:
-        # Optional: Clean up dummy data automatically
-        # if os.path.exists(base_dummy_dir):
-        #     print(f"\nCleaning up dummy data directory '{base_dummy_dir}'...")
-        #     shutil.rmtree(base_dummy_dir)
-        print(f"\nDummy data location: {base_dummy_dir}")
-        pass # Keep dummy data for inspection 
